@@ -15,6 +15,15 @@ export const OnboardingPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleFinish = async () => {
+    // Confirma a sessão diretamente no Supabase antes de chamar a RPC.
+    // Isso evita o erro genérico do banco quando o e-mail ainda não foi confirmado
+    // ou a sessão expirou entre o cadastro e o término do onboarding.
+    const authenticatedUser = await authService.getCurrentUser();
+    if (!authenticatedUser) {
+      setErrorMsg('Sua sessão não está ativa. Confirme seu e-mail, se necessário, e entre novamente para criar a família.');
+      return;
+    }
+
     if (!familyName.trim()) {
       setErrorMsg('Informe um nome para sua família.');
       return;

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/authService';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +35,20 @@ export const LoginPage: React.FC = () => {
           return;
         }
         await signUp(email, password, displayName);
-        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail caso seja necessária a confirmação.');
+
+        // Quando a confirmação de e-mail está habilitada no Supabase, o cadastro
+        // não cria uma sessão imediatamente. Não devemos navegar ao onboarding
+        // sem sessão, pois a criação da família exige auth.uid() no servidor.
+        const authenticatedUser = await authService.getCurrentUser();
+        if (!authenticatedUser) {
+          setSuccessMsg(
+            'Conta criada! Confirme o link enviado para seu e-mail e, em seguida, entre com seu e-mail e senha para continuar.'
+          );
+          setIsRegistering(false);
+          return;
+        }
+
+        setSuccessMsg('Conta criada com sucesso! Vamos configurar sua família.');
         navigate('/onboarding');
       } else {
         await signIn(email, password);
