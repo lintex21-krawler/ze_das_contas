@@ -9,7 +9,7 @@ import {
 import { MoneyCents, splitAmountIntoInstallments } from '@/domain/money/money';
 import { resolveInvoiceCycle } from '@/domain/cards/invoiceCycle';
 import { syncEngine } from '@/infrastructure/sync/sync-engine';
-import { addMonths, parseISO, format } from 'date-fns';
+import { addMonths, parseISO, format, startOfMonth } from 'date-fns';
 
 export interface CreateExpenseInput {
   familyId: string;
@@ -155,6 +155,13 @@ export async function createExpense(input: CreateExpenseInput): Promise<string> 
       const installmentId = crypto.randomUUID();
       const instAmount = installmentAmounts[i] ?? Math.floor(amountCents / count);
 
+      // Competência = mês da compra original + offset da parcela
+      // Primeira parcela (i=0): mês da compra
+      // Segunda parcela (i=1): mês da compra + 1
+      // etc.
+      const competenceDate = addMonths(startOfMonth(baseTxDate), i);
+      const competenceMonth = format(competenceDate, 'yyyy-MM-dd');
+
       installmentsToSave.push({
         id: installmentId,
         familyId,
@@ -163,7 +170,7 @@ export async function createExpense(input: CreateExpenseInput): Promise<string> 
         installmentNumber: i + 1,
         amountCents: instAmount,
         dueDate: cycle.dueDate,
-        competenceMonth: cycle.referenceMonth,
+        competenceMonth,
         status: 'settled',
         createdAt: now,
         updatedAt: now,
@@ -241,7 +248,7 @@ export async function createExpense(input: CreateExpenseInput): Promise<string> 
   };
 
   await db.executeLocalMutation(db.transactions, 'transactions', transaction, 'insert');
-  await db.accountMovements.put(movement);
+  await db.executeLocalMutation(db.accountMovements, 'account_movements', movement, 'insert');
 
   syncEngine.syncNow().catch(() => {});
   return transactionId;

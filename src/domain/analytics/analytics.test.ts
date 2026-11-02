@@ -162,6 +162,27 @@ describe('Domain: Analytics & Perspectives Engine', () => {
     expect(cashReport.netResultCents).toBe(25000);
   });
 
+  it('deve usar data da compra para despesa à vista e competência da fatura para crédito', () => {
+    const debitExpense = {
+      id: 'tx-oct-debit', familyId: 'fam-1', transactionType: 'expense' as const,
+      description: 'Compra no débito em outubro', amountCents: 10000,
+      transactionDate: '2026-10-25', competenceMonth: '2026-10-01', cashDate: '2026-10-25',
+      categoryId: null, paymentMethod: 'debit' as const, accountId: 'acc-1', cardId: null,
+      status: 'settled' as const, notes: null, shoppingListId: null, createdBy: 'u-1', updatedBy: 'u-1',
+      source: 'manual' as const, createdAt: '', updatedAt: '', deletedAt: null, version: 1, syncStatus: 'synced' as const,
+    };
+    const octoberDebitReport = calculateMonthReport('2026-11-01', 'competence', [debitExpense], [], [], []);
+    expect(octoberDebitReport.totalExpenseCents).toBe(0);
+
+    const novemberCreditInstallment: LocalInstallment = {
+      id: 'inst-credit-nov', familyId: 'fam-1', planId: 'plan-1', invoiceId: 'inv-1',
+      installmentNumber: 1, amountCents: 20000, dueDate: '2026-11-27', competenceMonth: '2026-11-01',
+      status: 'settled', createdAt: '', updatedAt: '', deletedAt: null, version: 1, syncStatus: 'synced',
+    };
+    const novemberCreditReport = calculateMonthReport('2026-11-01', 'competence', [debitExpense], [novemberCreditInstallment], [], []);
+    expect(novemberCreditReport.totalExpenseCents).toBe(20000);
+  });
+
   it('deve avaliar status de orçamentos e mensagens acolhedoras nas faixas corretas', () => {
     const budget: LocalBudget = {
       id: 'b-1',

@@ -268,7 +268,12 @@ describe('Casos Financeiros Obrigatórios de Referência', () => {
     expect(transactions).toHaveLength(2);
 
     const outboxItems = await db.outbox.toArray();
-    expect(outboxItems).toHaveLength(2);
-    expect(outboxItems[0]?.operationId).not.toBe(outboxItems[1]?.operationId);
+    // 2 transações + 2 movimentos de caixa = 4 operações no outbox
+    expect(outboxItems).toHaveLength(4);
+    
+    // As operações devem ter IDs únicos
+    const operationIds = outboxItems.map((item) => item.operationId);
+    const uniqueOperationIds = new Set(operationIds);
+    expect(uniqueOperationIds.size).toBe(4);
   });
 });

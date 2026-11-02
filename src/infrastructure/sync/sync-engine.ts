@@ -23,19 +23,36 @@ const DEPENDENCY_ORDER: Record<OutboxOperation['entityType'], number> = {
   installments: 7,
   invoice_payments: 8,
   transfers: 9,
-  budgets: 10,
-  financial_goals: 11,
-  shopping_lists: 12,
-  shopping_items: 13,
+  account_movements: 10,
+  budgets: 11,
+  financial_goals: 12,
+  shopping_lists: 13,
+  shopping_items: 14,
 };
 
 // Conversor camelCase -> snake_case para comunicação com o PostgreSQL
-export function toSnakeCase(obj: Record<string, any>): Record<string, any> {
+export function toSnakeCase(
+  obj: Record<string, any>,
+  entityType?: OutboxOperation['entityType']
+): Record<string, any> {
   const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    // Ignora campos internos de controle do Dexie
-    if (key === 'syncStatus') continue;
+  const fieldsNotPersistedByEntity: Partial<Record<OutboxOperation['entityType'], string[]>> = {
+    account_movements: ['updatedAt', 'deletedAt'],
+    invoice_payments: ['updatedAt', 'deletedAt'],
+    installment_plans: ['deletedAt'],
+    installments: ['deletedAt'],
+    invoices: ['deletedAt'],
+    transfers: ['deletedAt'],
+  };
+  const excludedFields = new Set([
+    'syncStatus',
+    'version',
+    ...(entityType ? fieldsNotPersistedByEntity[entityType] || [] : []),
+  ]);
 
+  for (const [key, value] of Object.entries(obj)) {
+    // Campos exclusivos do espelho local Dexie não pertencem ao payload SQL.
+    if (excludedFields.has(key)) continue;
     const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     result[snakeKey] = value;
   }
@@ -199,7 +216,7 @@ export class SyncEngine {
    */
   private async processOutboxItem(item: OutboxOperation): Promise<void> {
     const tableName = item.entityType;
-    const remoteData = toSnakeCase(item.payload);
+    const remoteData = toSnakeCase(item.payload, item.entityType);
 
     if (item.operationType === 'insert') {
       const { error } = await supabase.from(tableName).upsert(remoteData, {
@@ -223,15 +240,24 @@ export class SyncEngine {
       if (error) throw error;
     }
 
-    // Registra a operação concluída na tabela de controle de sincronização remota
-    await supabase.from('sync_operations').upsert({
-      operation_id: item.operationId,
-      family_id: item.familyId,
-      user_id: (await supabase.auth.getUser()).data.user?.id,
-      entity_type: item.entityType,
-      operation_type: item.operationType,
-      result_data: { status: 'success' },
-    });
+    // Registra a operação concluída na tabela de controle de sincronização remota.
+    // A gravação principal já foi bem-sucedida; falha de telemetria não deve
+    // deixar a operação presa no outbox nem duplicar o lançamento na retentativa.
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    if (currentUser) {
+      const { error: operationError } = await supabase.from('sync_operations').upsert({
+        operation_id: item.operationId,
+        family_id: item.familyId,
+        user_id: currentUser.id,
+        entity_type: item.entityType,
+        operation_type: item.operationType,
+        result_data: { status: 'success' },
+      });
+
+      if (operationError) {
+        console.warn('Operação sincronizada, mas não foi possível registrar diagnóstico:', operationError.message);
+      }
+    }
   }
 
   public destroy() {

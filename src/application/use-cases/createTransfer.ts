@@ -91,7 +91,8 @@ export async function createTransfer(input: CreateTransferInput): Promise<string
   };
 
   await db.executeLocalMutation(db.transfers, 'transfers', transfer, 'insert');
-  await db.accountMovements.bulkPut([movementOut, movementIn]);
+  await db.executeLocalMutation(db.accountMovements, 'account_movements', movementOut, 'insert');
+  await db.executeLocalMutation(db.accountMovements, 'account_movements', movementIn, 'insert');
 
   syncEngine.syncNow().catch(() => {});
   return transferId;

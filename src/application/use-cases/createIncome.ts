@@ -82,7 +82,7 @@ export async function createIncome(input: CreateIncomeInput): Promise<string> {
       version: 1,
       syncStatus: 'pending',
     };
-    await db.accountMovements.put(movement);
+    await db.executeLocalMutation(db.accountMovements, 'account_movements', movement, 'insert');
   }
 
   syncEngine.syncNow().catch(() => {});

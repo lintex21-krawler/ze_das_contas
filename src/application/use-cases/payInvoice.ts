@@ -1,5 +1,5 @@
 import { db } from '@/infrastructure/local/db';
-import { LocalInvoicePayment, LocalAccountMovement } from '@/infrastructure/local/types';
+import { LocalInvoicePayment, LocalAccountMovement, LocalInvoice } from '@/infrastructure/local/types';
 import { MoneyCents, addMoney } from '@/domain/money/money';
 import { syncEngine } from '@/infrastructure/sync/sync-engine';
 
@@ -72,16 +72,21 @@ export async function payInvoice(input: PayInvoiceInput): Promise<string> {
   const installments = await db.installments.where('invoiceId').equals(invoiceId).toArray();
   const totalInvoiceCents = installments.reduce((acc, inst) => acc + inst.amountCents, 0);
 
-  const newStatus = newPaidAmount >= totalInvoiceCents && totalInvoiceCents > 0 ? 'paid' : 'partially_paid';
+  const newStatus: LocalInvoice['status'] =
+    newPaidAmount >= totalInvoiceCents && totalInvoiceCents > 0 ? 'paid' : 'partially_paid';
 
   await db.executeLocalMutation(db.invoicePayments, 'invoice_payments', payment, 'insert');
-  await db.accountMovements.put(movement);
-  await db.invoices.update(invoiceId, {
+  await db.executeLocalMutation(db.accountMovements, 'account_movements', movement, 'insert');
+
+  const updatedInvoice = {
+    ...invoice,
     paidAmountCents: newPaidAmount,
     status: newStatus,
     updatedAt: now,
-    syncStatus: 'pending',
-  });
+    version: invoice.version + 1,
+    syncStatus: 'pending' as const,
+  };
+  await db.executeLocalMutation(db.invoices, 'invoices', updatedInvoice, 'update');
 
   syncEngine.syncNow().catch(() => {});
   return paymentId;

@@ -13,6 +13,7 @@ export interface OutboxOperation {
     | 'invoices'
     | 'invoice_payments'
     | 'transfers'
+    | 'account_movements'
     | 'shopping_lists'
     | 'shopping_items'
     | 'budgets'
