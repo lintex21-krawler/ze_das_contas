@@ -55,7 +55,7 @@ export class ZeDatabase extends Dexie {
       budgets: 'id, familyId, categoryId, referenceMonth, perspective',
       financialGoals: 'id, familyId, status',
       shoppingLists: 'id, familyId, status',
-      shoppingItems: 'id, familyId, listId, isChecked',
+      shoppingItems: 'id, familyId, listId, isPurchased',
       
       // Filas e Metadados de Sincronização
       outbox: 'operationId, familyId, entityType, status, nextAttemptAt, createdAt',

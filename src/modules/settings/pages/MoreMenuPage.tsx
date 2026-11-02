@@ -31,6 +31,12 @@ export const MoreMenuPage: React.FC = () => {
       path: '/contas',
     },
     {
+      title: 'Categorias',
+      description: 'Personalize categorias de receitas e despesas',
+      icon: Settings,
+      path: '/categorias',
+    },
+    {
       title: 'Listas de Compras',
       description: 'Checklist sincronizado e comparação de preços estimados',
       icon: ShoppingCart,

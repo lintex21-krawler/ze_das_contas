@@ -153,6 +153,8 @@ export interface LocalShoppingItem extends BaseLocalEntity {
   unit: string;
   estimatedPriceCents: MoneyCents | null;
   actualPriceCents: MoneyCents | null;
-  isChecked: boolean;
+  categoryId: string | null;
+  isPurchased: boolean;
+  purchasedAt: string | null;
   itemOrder: number;
 }
