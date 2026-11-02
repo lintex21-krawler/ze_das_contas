@@ -13,6 +13,7 @@ import { FamilyPage } from '@/modules/family/pages/FamilyPage';
 import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
 import { MoreMenuPage } from '@/modules/settings/pages/MoreMenuPage';
 import { SyncDebugPage } from '@/modules/settings/pages/SyncDebugPage';
+import { ExtractPage } from '@/modules/analytics/pages/ExtractPage';
 import { LoginPage } from '@/modules/auth/pages/LoginPage';
 import { OnboardingPage } from '@/modules/auth/pages/OnboardingPage';
 
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
           {
             path: 'mais',
             element: <MoreMenuPage />,
+          },
+          {
+            path: 'extrato',
+            element: <ExtractPage />,
           },
           {
             path: 'sync-debug',

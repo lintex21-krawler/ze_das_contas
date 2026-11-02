@@ -10,12 +10,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/infrastructure/local/db';
 import { calculateMonthReport, FinancialPerspective } from '@/domain/analytics/perspectivesCalculator';
 import { calculateCategoryBreakdown } from '@/domain/analytics/categoryAnalytics';
-import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, Users } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Scale, PiggyBank, Users, FileText } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
+import { useNavigate } from 'react-router-dom';
 
 export const AnalyticsPage: React.FC = () => {
   const { currentFamily, user } = useAuth();
   const familyId = currentFamily?.id || '';
+
+  const navigate = useNavigate();
 
   // Estado do mês de competência selecionado ('YYYY-MM-01')
   const [currentMonth, setCurrentMonth] = useState<string>(() => {
@@ -95,6 +98,16 @@ export const AnalyticsPage: React.FC = () => {
       <PageHeader
         title="Análises & Relatórios"
         subtitle="Acompanhe o consumo e resultados da família"
+        rightAction={
+          <button
+            type="button"
+            onClick={() => navigate('/extrato')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-background-card border border-border text-xs font-semibold text-text-secondary hover:text-brand-primary hover:border-brand-primary/40"
+          >
+            <FileText className="w-4 h-4" />
+            Ver Extrato
+          </button>
+        }
       />
 
       {/* Navegação de Mês e Filtro de Pessoa */}

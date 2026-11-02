@@ -129,10 +129,10 @@ export const DashboardPage: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/analises')}
+            onClick={() => navigate('/extrato')}
             className="text-xs text-brand-primary"
           >
-            Ver todas
+            Ver extrato
           </Button>
         </div>
 
