@@ -1,23 +1,60 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, signUp } = useAuth();
+
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const from = (location.state as any)?.from?.pathname || '/';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
     setIsSubmitting(true);
-    // Na fase 2, integraremos com supabase.auth.signInWithPassword
-    setTimeout(() => {
+
+    try {
+      if (isRegistering) {
+        if (!displayName.trim()) {
+          setErrorMsg('Por favor, informe seu nome ou apelido.');
+          setIsSubmitting(false);
+          return;
+        }
+        await signUp(email, password, displayName);
+        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail caso seja necessária a confirmação.');
+        navigate('/onboarding');
+      } else {
+        await signIn(email, password);
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      console.error('Erro na autenticação:', err);
+      const msg = err.message || '';
+      if (msg.includes('Invalid login credentials')) {
+        setErrorMsg('E-mail ou senha incorretos.');
+      } else if (msg.includes('already registered')) {
+        setErrorMsg('Este e-mail já está cadastrado. Tente entrar.');
+      } else if (msg.includes('Password should be at least')) {
+        setErrorMsg('A senha deve ter pelo menos 6 caracteres.');
+      } else {
+        setErrorMsg(msg || 'Ocorreu um erro ao processar. Tente novamente.');
+      }
+    } finally {
       setIsSubmitting(false);
-      navigate('/');
-    }, 600);
+    }
   };
 
   return (
@@ -32,15 +69,47 @@ export const LoginPage: React.FC = () => {
             Zé das Contas
           </h1>
           <p className="text-sm text-text-secondary">
-            Seu dinheiro, organizado em família.
+            {isRegistering
+              ? 'Crie seu acesso para gerenciar as finanças familiares.'
+              : 'Seu dinheiro, organizado em família.'}
           </p>
         </div>
+
+        {/* Mensagem de Erro / Sucesso */}
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-financial-expense/15 border border-financial-expense/30 text-financial-expense text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="p-3 rounded-xl bg-financial-income/15 border border-financial-income/30 text-financial-income text-xs">
+            {successMsg}
+          </div>
+        )}
 
         {/* Formulário */}
         <form
           onSubmit={handleSubmit}
           className="p-6 rounded-card bg-background-card border border-border shadow-md flex flex-col gap-4"
         >
+          {isRegistering && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-text-secondary">
+                Seu Nome ou Apelido
+              </label>
+              <input
+                type="text"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Ex.: Lucas"
+                className="w-full px-3.5 py-2.5 rounded-input bg-background-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              />
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-text-secondary">
               E-mail
@@ -60,21 +129,24 @@ export const LoginPage: React.FC = () => {
               <label className="text-xs font-semibold text-text-secondary">
                 Senha
               </label>
-              <button
-                type="button"
-                onClick={() => alert('Recuperação de senha será integrada com o Supabase Auth na Fase 2.')}
-                className="text-xs text-brand-primary hover:underline"
-              >
-                Esqueceu a senha?
-              </button>
+              {!isRegistering && (
+                <button
+                  type="button"
+                  onClick={() => alert('Para redefinir sua senha, solicite ao administrador da família ou utilize o e-mail cadastrado.')}
+                  className="text-xs text-brand-primary hover:underline"
+                >
+                  Esqueceu a senha?
+                </button>
+              )}
             </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha secreta"
+                placeholder="Mínimo 6 caracteres"
                 className="w-full pl-3.5 pr-10 py-2.5 rounded-input bg-background-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
               />
               <button
@@ -94,24 +166,27 @@ export const LoginPage: React.FC = () => {
             isLoading={isSubmitting}
             className="w-full mt-2"
           >
-            Entrar
+            {isRegistering ? 'Criar Minha Conta' : 'Entrar'}
           </Button>
 
           <div className="pt-2 border-t border-border flex items-center justify-center gap-1 text-xs text-text-secondary">
-            <span>Novo por aqui?</span>
+            <span>{isRegistering ? 'Já tem uma conta?' : 'Novo por aqui?'}</span>
             <button
               type="button"
-              onClick={() => navigate('/onboarding')}
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setErrorMsg(null);
+              }}
               className="text-brand-primary font-semibold hover:underline"
             >
-              Criar conta familiar
+              {isRegistering ? 'Fazer login' : 'Criar conta familiar'}
             </button>
           </div>
         </form>
 
         <div className="flex items-center justify-center gap-2 text-xs text-text-secondary text-center">
           <ShieldCheck className="w-4 h-4 text-financial-income shrink-0" />
-          <span>Dados criptografados e isolados por família</span>
+          <span>Isolamento e criptografia por família</span>
         </div>
       </div>
     </div>

@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/modules/auth/context/AuthContext';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { profile, currentFamily } = useAuth();
 
   // Valores de exemplo inicial para validação visual (serão substituídos pelo hook do Dexie/Supabase nas fases seguintes)
   const saldoConsolidado = 485020; // R$ 4.850,20
@@ -16,11 +18,16 @@ export const DashboardPage: React.FC = () => {
   const despesasMes = 345080; // R$ 3.450,80
   const saldoLivreEstimado = 139940; // R$ 1.399,40
 
+  const greeting = profile ? `Olá, ${profile.display_name}!` : 'Olá, Família!';
+  const subtitle = currentFamily
+    ? `${currentFamily.name} • Novembro de 2026`
+    : 'Novembro de 2026 • Visão Geral';
+
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Olá, Família!"
-        subtitle="Novembro de 2026 • Visão Geral"
+        title={greeting}
+        subtitle={subtitle}
         rightAction={
           <Button
             variant="primary"

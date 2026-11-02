@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
+import { AuthGuard } from '@/app/guards/AuthGuard';
 import { DashboardPage } from '@/modules/dashboard/pages/DashboardPage';
 import { QuickTransactionPage } from '@/modules/transactions/pages/QuickTransactionPage';
 import { AnalyticsPage } from '@/modules/analytics/pages/AnalyticsPage';
@@ -19,31 +20,36 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <AppShell />,
+    element: <AuthGuard />,
     children: [
       {
-        index: true,
-        element: <DashboardPage />,
-      },
-      {
-        path: 'lancar',
-        element: <QuickTransactionPage />,
-      },
-      {
-        path: 'analises',
-        element: <AnalyticsPage />,
-      },
-      {
-        path: 'cartoes',
-        element: <CardsPage />,
-      },
-      {
-        path: 'mais',
-        element: <MoreMenuPage />,
-      },
-      {
-        path: '*',
-        element: <DashboardPage />,
+        element: <AppShell />,
+        children: [
+          {
+            index: true,
+            element: <DashboardPage />,
+          },
+          {
+            path: 'lancar',
+            element: <QuickTransactionPage />,
+          },
+          {
+            path: 'analises',
+            element: <AnalyticsPage />,
+          },
+          {
+            path: 'cartoes',
+            element: <CardsPage />,
+          },
+          {
+            path: 'mais',
+            element: <MoreMenuPage />,
+          },
+          {
+            path: '*',
+            element: <DashboardPage />,
+          },
+        ],
       },
     ],
   },
