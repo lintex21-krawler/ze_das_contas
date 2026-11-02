@@ -12,6 +12,7 @@ import { RecurringPage } from '@/modules/recurring/pages/RecurringPage';
 import { FamilyPage } from '@/modules/family/pages/FamilyPage';
 import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
 import { MoreMenuPage } from '@/modules/settings/pages/MoreMenuPage';
+import { SyncDebugPage } from '@/modules/settings/pages/SyncDebugPage';
 import { LoginPage } from '@/modules/auth/pages/LoginPage';
 import { OnboardingPage } from '@/modules/auth/pages/OnboardingPage';
 
@@ -74,6 +75,10 @@ export const router = createBrowserRouter([
           {
             path: 'mais',
             element: <MoreMenuPage />,
+          },
+          {
+            path: 'sync-debug',
+            element: <SyncDebugPage />,
           },
           {
             path: '*',

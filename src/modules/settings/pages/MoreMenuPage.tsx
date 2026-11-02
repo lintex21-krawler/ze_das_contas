@@ -12,6 +12,7 @@ import {
   Info,
   FileJson,
   FileSpreadsheet,
+  Bug,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/context/AuthContext';
@@ -66,6 +67,12 @@ export const MoreMenuPage: React.FC = () => {
       description: 'Fuso horário, moeda, preferências de fechamento e alertas',
       icon: Settings,
       path: '/configuracoes',
+    },
+    {
+      title: '🔧 Diagnóstico de Sincronização',
+      description: 'Logs técnicos, outbox e troubleshooting',
+      icon: Bug,
+      path: '/sync-debug',
     },
   ];
 
