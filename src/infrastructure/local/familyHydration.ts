@@ -15,7 +15,11 @@ const TABLES = [
   { remote: 'installments', local: 'installments', softDelete: false },
   { remote: 'invoice_payments', local: 'invoicePayments', softDelete: false },
   { remote: 'account_movements', local: 'accountMovements', softDelete: false },
+  // Estas tabelas foram adicionadas em migration posterior; aqui não há
+  // coluna deleted_at no schema original — carregadas sem filtro.
   { remote: 'transfers', local: 'transfers', softDelete: false },
+  // Estas tabelas ainda não têm deleted_at no schema original. Elas são
+  // carregadas integralmente para não interromper a restauração da família.
   { remote: 'budgets', local: 'budgets', softDelete: true },
   { remote: 'financial_goals', local: 'financialGoals', softDelete: true },
   { remote: 'shopping_lists', local: 'shoppingLists', softDelete: true },
@@ -38,15 +42,43 @@ function toLocalEntity(row: Record<string, unknown>) {
 }
 
 export async function hydrateFamilyData(familyId: string): Promise<void> {
+  // Processa cada tabela de forma independente. Se uma falhar (ex.: coluna
+  // ainda não existe no schema), as demais ainda são restauradas.
+  const errors: string[] = [];
+
   for (const config of TABLES) {
-    let query = supabase.from(config.remote).select('*').eq('family_id', familyId);
-    if (config.softDelete) query = query.is('deleted_at', null);
+    try {
+      let query = supabase.from(config.remote).select('*').eq('family_id', familyId);
+      if (config.softDelete) query = query.is('deleted_at', null);
 
-    const { data, error } = await query;
-    if (error) throw new Error(`${config.remote}: ${error.message}`);
-    if (!data?.length) continue;
+      const { data, error } = await query;
+      if (error) {
+        errors.push(`${config.remote}: ${error.message}`);
+        continue;
+      }
+      if (!data?.length) continue;
 
-    const table = db[config.local] as any;
-    await table.bulkPut(data.map((row) => toLocalEntity(row as Record<string, unknown>)));
+      const table = db[config.local] as any;
+
+      // Para tabelas sem soft-delete remoto, não sobrescreve registros que
+      // já foram excluídos localmente e ainda aguardam sync com o Supabase.
+      if (!config.softDelete) {
+        const localDeletedIds = new Set(
+          (await table.where('familyId').equals(familyId).filter((e: any) => !!e.deletedAt).keys())
+        );
+        const rows = data
+          .map((row) => toLocalEntity(row as Record<string, unknown>))
+          .filter((entity) => !localDeletedIds.has(entity.id as string));
+        if (rows.length > 0) await table.bulkPut(rows);
+      } else {
+        await table.bulkPut(data.map((row) => toLocalEntity(row as Record<string, unknown>)));
+      }
+    } catch (err: any) {
+      errors.push(`${config.remote}: ${err.message ?? 'erro inesperado'}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.warn('Hidratação parcial — algumas tabelas falharam:', errors.join('; '));
   }
 }
