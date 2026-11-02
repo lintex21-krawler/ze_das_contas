@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { Wallet, Plus, ArrowLeftRight, Landmark } from 'lucide-react';
+import { Wallet, Plus, ArrowLeftRight, Landmark, Trash2 } from 'lucide-react';
 import { useAuth } from '@/modules/auth/context/AuthContext';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/infrastructure/local/db';
@@ -12,6 +12,7 @@ import { calculateAccountBalance } from '@/domain/finance/balanceCalculator';
 import { createTransfer } from '@/application/use-cases/createTransfer';
 import { MoneyCents } from '@/domain/money/money';
 import { LocalAccount } from '@/infrastructure/local/types';
+import { softDeleteFinancialEntity } from '@/application/use-cases/softDeleteFinancialEntity';
 
 export const AccountsPage: React.FC = () => {
   const { currentFamily, user } = useAuth();
@@ -80,6 +81,20 @@ export const AccountsPage: React.FC = () => {
       alert(err.message || 'Erro ao criar conta');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async (account: LocalAccount) => {
+    const hasMovements = movements.some((movement) => movement.accountId === account.id);
+    const message = hasMovements
+      ? `Excluir “${account.name}” da lista? O saldo e o histórico permanecem preservados, mas a conta não poderá receber novos lançamentos.`
+      : `Excluir “${account.name}”?`;
+
+    if (!window.confirm(message)) return;
+    try {
+      await softDeleteFinancialEntity(db.accounts, 'accounts', account);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível excluir a conta.');
     }
   };
 
@@ -175,15 +190,25 @@ export const AccountsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-background-elevated border border-border uppercase font-semibold text-text-secondary">
-                    {acc.accountType === 'checking'
-                      ? 'Corrente'
-                      : acc.accountType === 'savings'
-                      ? 'Poupança'
-                      : acc.accountType === 'wallet'
-                      ? 'Carteira'
-                      : 'Investimento'}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-background-elevated border border-border uppercase font-semibold text-text-secondary">
+                      {acc.accountType === 'checking'
+                        ? 'Corrente'
+                        : acc.accountType === 'savings'
+                        ? 'Poupança'
+                        : acc.accountType === 'wallet'
+                        ? 'Carteira'
+                        : 'Investimento'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAccount(acc)}
+                      title="Excluir conta"
+                      className="p-1.5 rounded-lg text-text-secondary hover:bg-financial-expense/10 hover:text-financial-expense"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-0.5 pt-2 border-t border-border">

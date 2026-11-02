@@ -4,12 +4,13 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Receipt } from 'lucide-react';
+import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Receipt, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/context/AuthContext';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/infrastructure/local/db';
 import { calculateConsolidatedBalance } from '@/domain/finance/balanceCalculator';
+import { deleteTransaction } from '@/application/use-cases/deleteTransaction';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,15 @@ export const DashboardPage: React.FC = () => {
   const currentMonthPrefix = new Date().toISOString().slice(0, 7);
 
   // Cálculos financeiros reais
+  const handleDeleteTransaction = async (transaction: typeof transactions[number]) => {
+    if (!window.confirm(`Excluir o lançamento “${transaction.description}” de forma definitiva da visualização? Esta ação também remove os efeitos de caixa e parcelas relacionados.`)) return;
+    try {
+      await deleteTransaction(transaction);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível excluir o lançamento.');
+    }
+  };
+
   const saldoConsolidado = calculateConsolidatedBalance(accounts, movements);
 
   const receitasMes = transactions
@@ -165,12 +175,22 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
 
-                <MoneyDisplay
-                  cents={tx.amountCents}
-                  type={tx.transactionType === 'income' ? 'income' : 'expense'}
-                  size="md"
-                  showPositiveSign
-                />
+                <div className="flex items-center gap-1">
+                  <MoneyDisplay
+                    cents={tx.amountCents}
+                    type={tx.transactionType === 'income' ? 'income' : 'expense'}
+                    size="md"
+                    showPositiveSign
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTransaction(tx)}
+                    title="Excluir lançamento"
+                    className="p-1.5 rounded-lg text-text-secondary hover:bg-financial-expense/10 hover:text-financial-expense"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

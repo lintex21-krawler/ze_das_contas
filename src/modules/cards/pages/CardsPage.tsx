@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { CreditCard as CardIcon, Plus, Calendar } from 'lucide-react';
+import { CreditCard as CardIcon, Plus, Calendar, Trash2 } from 'lucide-react';
 import { useAuth } from '@/modules/auth/context/AuthContext';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/infrastructure/local/db';
@@ -13,6 +13,7 @@ import { payInvoice } from '@/application/use-cases/payInvoice';
 import { MoneyCents, formatBRL } from '@/domain/money/money';
 import { LocalCard } from '@/infrastructure/local/types';
 import { cn } from '@/shared/utils/cn';
+import { softDeleteFinancialEntity } from '@/application/use-cases/softDeleteFinancialEntity';
 
 export const CardsPage: React.FC = () => {
   const { currentFamily, user } = useAuth();
@@ -92,6 +93,20 @@ export const CardsPage: React.FC = () => {
       alert(err.message || 'Erro ao criar cartão');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCard = async (card: LocalCard) => {
+    const hasHistory = invoices.some((invoice) => invoice.cardId === card.id);
+    const message = hasHistory
+      ? `Excluir “${card.name}” da lista? Faturas e compras já registradas serão preservadas no histórico.`
+      : `Excluir “${card.name}”?`;
+
+    if (!window.confirm(message)) return;
+    try {
+      await softDeleteFinancialEntity(db.cards, 'cards', card);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível excluir o cartão.');
     }
   };
 
@@ -212,10 +227,20 @@ export const CardsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-background-elevated border border-border font-medium text-text-secondary flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Fecha dia {card.closingDay} • Vence dia {card.dueDay}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-background-elevated border border-border font-medium text-text-secondary flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Fecha dia {card.closingDay} • Vence dia {card.dueDay}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCard(card)}
+                      title="Excluir cartão"
+                      className="p-1.5 rounded-lg text-text-secondary hover:bg-financial-expense/10 hover:text-financial-expense"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Barra de Limite */}
