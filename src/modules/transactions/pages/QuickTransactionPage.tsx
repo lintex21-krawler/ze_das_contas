@@ -55,6 +55,15 @@ export const QuickTransactionPage: React.FC = () => {
     [familyId]
   ) || [];
 
+  // Categorias compatíveis com o tipo de lançamento atual.
+  const applicableCategories = categories.filter((category) =>
+    txType === 'expense'
+      ? category.transactionType === 'expense' || category.transactionType === 'both'
+      : txType === 'income'
+      ? category.transactionType === 'income' || category.transactionType === 'both'
+      : false
+  );
+
   // Define seleção padrão quando os dados carregarem
   React.useEffect(() => {
     if (!accountId && accounts.length > 0) {
@@ -66,10 +75,10 @@ export const QuickTransactionPage: React.FC = () => {
     if (!cardId && cards.length > 0) {
       setCardId(cards[0]?.id || '');
     }
-    if (!categoryId && categories.length > 0) {
-      setCategoryId(categories[0]?.id || '');
+    if (!categoryId && applicableCategories.length > 0) {
+      setCategoryId(applicableCategories[0]?.id || '');
     }
-  }, [accounts, cards, categories, accountId, destinationAccountId, cardId, categoryId]);
+  }, [accounts, cards, applicableCategories, accountId, destinationAccountId, cardId, categoryId]);
 
   const typeButtons = [
     { type: 'expense' as const, label: 'Despesa', icon: ArrowDownRight, color: 'text-financial-expense' },
@@ -262,12 +271,21 @@ export const QuickTransactionPage: React.FC = () => {
                   className="w-full px-3 py-2.5 rounded-input bg-background-elevated border border-border text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="">Selecione...</option>
-                  {categories.map((c) => (
+                  {applicableCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
                   ))}
                 </select>
+                {applicableCategories.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/categorias')}
+                    className="mt-1 text-left text-xs font-semibold text-brand-primary hover:underline"
+                  >
+                    Criar uma categoria agora
+                  </button>
+                )}
               </div>
             )}
           </div>

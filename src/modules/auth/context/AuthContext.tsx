@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/infrastructure/supabase/client';
 import { authService, Profile, Family } from '../services/authService';
+import { hydrateFamilyCategories } from '@/infrastructure/local/categoryHydration';
 
 interface AuthContextType {
   user: User | null;
@@ -45,6 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentFamilyState(selected);
       if (selected) {
         localStorage.setItem(SELECTED_FAMILY_KEY, selected.id);
+        // As categorias padrão são semeadas no Supabase ao criar a família.
+        // Espelhamos a coleção no Dexie para que o formulário funcione offline.
+        hydrateFamilyCategories(selected.id).catch((error) => {
+          console.warn('Não foi possível carregar categorias no banco local:', error);
+        });
       }
     } catch (err) {
       console.error('Erro ao carregar dados do usuário:', err);
@@ -122,6 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (first) {
         setCurrentFamilyState(first);
         localStorage.setItem(SELECTED_FAMILY_KEY, first.id);
+        hydrateFamilyCategories(first.id).catch((error) => {
+          console.warn('Não foi possível carregar categorias no banco local:', error);
+        });
       }
     }
   };
@@ -129,6 +138,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setCurrentFamily = (family: Family) => {
     localStorage.setItem(SELECTED_FAMILY_KEY, family.id);
     setCurrentFamilyState(family);
+    hydrateFamilyCategories(family.id).catch((error) => {
+      console.warn('Não foi possível carregar categorias no banco local:', error);
+    });
   };
 
   return (
