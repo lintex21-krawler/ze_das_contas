@@ -2,6 +2,7 @@ import React from 'react';
 import { SyncStatus, SyncState } from '@/components/feedback/SyncStatus';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useSync } from '@/infrastructure/sync/SyncContext';
 
 export interface PageHeaderProps {
   title: string;
@@ -14,15 +15,19 @@ export interface PageHeaderProps {
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
-  syncStatus = 'synced',
-  pendingCount = 0,
+  syncStatus: customStatus,
+  pendingCount: customCount,
   rightAction,
 }) => {
   const { resolvedTheme, setTheme } = useTheme();
+  const { syncState: engineSyncState, pendingCount: enginePendingCount, syncNow } = useSync();
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
+
+  const activeSyncStatus = customStatus || engineSyncState;
+  const activePendingCount = customCount !== undefined ? customCount : enginePendingCount;
 
   return (
     <header className="flex items-center justify-between gap-4 py-4 mb-2">
@@ -38,7 +43,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        <SyncStatus status={syncStatus} pendingCount={pendingCount} />
+        <SyncStatus
+          status={activeSyncStatus}
+          pendingCount={activePendingCount}
+          onRetry={syncNow}
+        />
 
         {/* Botão de alternar tema visível em mobile */}
         <button

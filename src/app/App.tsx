@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { AuthProvider } from '@/modules/auth/context/AuthContext';
+import { SyncProvider } from '@/infrastructure/sync/SyncContext';
 import { router } from './router';
 
 const queryClient = new QueryClient({
@@ -19,7 +20,9 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <SyncProvider>
+            <RouterProvider router={router} />
+          </SyncProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
