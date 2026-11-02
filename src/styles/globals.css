@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #F5F7FA;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #F0F3F7;
+  --color-border: #E2E8F0;
+  --color-text-main: #172033;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #94A3B8;
+}
+
+.dark {
+  --color-bg: #0B1220;
+  --color-surface: #121D2D;
+  --color-surface-elevated: #1A2940;
+  --color-border: #26364B;
+  --color-text-main: #F4F7FB;
+  --color-text-muted: #A7B4C5;
+  --color-text-disabled: #718096;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-text-primary min-h-screen font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Utilitário para valores financeiros tabulares */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Suporte a safe area mobile */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
