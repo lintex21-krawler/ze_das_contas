@@ -7,21 +7,57 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { Wallet, ArrowDownRight, ArrowUpRight, Plus, Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/modules/auth/context/AuthContext';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/infrastructure/local/db';
+import { calculateConsolidatedBalance } from '@/domain/finance/balanceCalculator';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { profile, currentFamily } = useAuth();
+  const familyId = currentFamily?.id || '';
 
-  // Valores de exemplo inicial para validação visual (serão substituídos pelo hook do Dexie/Supabase nas fases seguintes)
-  const saldoConsolidado = 485020; // R$ 4.850,20
-  const receitasMes = 620000; // R$ 6.200,00
-  const despesasMes = 345080; // R$ 3.450,80
-  const saldoLivreEstimado = 139940; // R$ 1.399,40
+  // Consultas reativas aos dados locais da família
+  const accounts = useLiveQuery(
+    () => db.accounts.where('familyId').equals(familyId).filter((a) => !a.deletedAt).toArray(),
+    [familyId]
+  ) || [];
+
+  const movements = useLiveQuery(
+    () => db.accountMovements.where('familyId').equals(familyId).filter((m) => !m.deletedAt).toArray(),
+    [familyId]
+  ) || [];
+
+  const transactions = useLiveQuery(
+    () =>
+      db.transactions
+        .where('familyId')
+        .equals(familyId)
+        .filter((t) => !t.deletedAt)
+        .reverse()
+        .sortBy('transactionDate'),
+    [familyId]
+  ) || [];
+
+  // Mês atual 'YYYY-MM'
+  const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+
+  // Cálculos financeiros reais
+  const saldoConsolidado = calculateConsolidatedBalance(accounts, movements);
+
+  const receitasMes = transactions
+    .filter((t) => t.transactionType === 'income' && t.status === 'settled' && t.transactionDate.startsWith(currentMonthPrefix))
+    .reduce((acc, t) => acc + t.amountCents, 0);
+
+  const despesasMes = transactions
+    .filter((t) => t.transactionType === 'expense' && t.status === 'settled' && t.transactionDate.startsWith(currentMonthPrefix))
+    .reduce((acc, t) => acc + t.amountCents, 0);
+
+  const saldoLivreEstimado = Math.max(0, saldoConsolidado - despesasMes);
 
   const greeting = profile ? `Olá, ${profile.display_name}!` : 'Olá, Família!';
   const subtitle = currentFamily
-    ? `${currentFamily.name} • Novembro de 2026`
-    : 'Novembro de 2026 • Visão Geral';
+    ? `${currentFamily.name} • Visão Geral`
+    : 'Visão Geral Financeira';
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,7 +91,7 @@ export const DashboardPage: React.FC = () => {
         <MoneyDisplay cents={saldoConsolidado} size="display" />
 
         <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-text-secondary">
-          <span>Saldo livre estimado (após obrigações):</span>
+          <span>Saldo livre estimado:</span>
           <MoneyDisplay cents={saldoLivreEstimado} size="sm" type="income" />
         </div>
       </div>
@@ -66,15 +102,11 @@ export const DashboardPage: React.FC = () => {
           label="Receitas do Mês"
           value={<MoneyDisplay cents={receitasMes} type="income" size="lg" />}
           icon={<ArrowUpRight className="w-5 h-5 text-financial-income" />}
-          comparison="+12% vs. mês ant."
-          comparisonType="positive"
         />
         <MetricCard
           label="Despesas do Mês"
           value={<MoneyDisplay cents={despesasMes} type="expense" size="lg" />}
           icon={<ArrowDownRight className="w-5 h-5 text-financial-expense" />}
-          comparison="-5% vs. mês ant."
-          comparisonType="positive"
         />
       </div>
 
@@ -94,14 +126,55 @@ export const DashboardPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* Empty state inicial */}
-        <EmptyState
-          icon={<Receipt className="w-7 h-7" />}
-          title="Nenhum lançamento recente"
-          description="Registre suas receitas e despesas com um toque. Funciona perfeitamente mesmo sem internet."
-          actionLabel="Novo Lançamento"
-          onAction={() => navigate('/lancar')}
-        />
+        {transactions.length === 0 ? (
+          <EmptyState
+            icon={<Receipt className="w-7 h-7" />}
+            title="Nenhum lançamento recente"
+            description="Registre suas receitas e despesas com um toque. Funciona perfeitamente mesmo sem internet."
+            actionLabel="Novo Lançamento"
+            onAction={() => navigate('/lancar')}
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {transactions.slice(0, 10).map((tx) => (
+              <div
+                key={tx.id}
+                className="p-3.5 rounded-card bg-background-card border border-border flex items-center justify-between gap-3 shadow-sm hover:border-brand-primary/40 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      tx.transactionType === 'income'
+                        ? 'bg-financial-income/15 text-financial-income'
+                        : 'bg-financial-expense/15 text-financial-expense'
+                    }`}
+                  >
+                    {tx.transactionType === 'income' ? (
+                      <ArrowUpRight className="w-4 h-4" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-text-primary line-clamp-1">
+                      {tx.description}
+                    </span>
+                    <span className="text-[11px] text-text-secondary">
+                      {tx.transactionDate} • {tx.paymentMethod ? tx.paymentMethod.toUpperCase() : 'RECEITA'}
+                    </span>
+                  </div>
+                </div>
+
+                <MoneyDisplay
+                  cents={tx.amountCents}
+                  type={tx.transactionType === 'income' ? 'income' : 'expense'}
+                  size="md"
+                  showPositiveSign
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

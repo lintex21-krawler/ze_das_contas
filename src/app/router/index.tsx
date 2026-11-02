@@ -5,6 +5,7 @@ import { DashboardPage } from '@/modules/dashboard/pages/DashboardPage';
 import { QuickTransactionPage } from '@/modules/transactions/pages/QuickTransactionPage';
 import { AnalyticsPage } from '@/modules/analytics/pages/AnalyticsPage';
 import { CardsPage } from '@/modules/cards/pages/CardsPage';
+import { AccountsPage } from '@/modules/accounts/pages/AccountsPage';
 import { MoreMenuPage } from '@/modules/settings/pages/MoreMenuPage';
 import { LoginPage } from '@/modules/auth/pages/LoginPage';
 import { OnboardingPage } from '@/modules/auth/pages/OnboardingPage';
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
           {
             path: 'cartoes',
             element: <CardsPage />,
+          },
+          {
+            path: 'contas',
+            element: <AccountsPage />,
           },
           {
             path: 'mais',
