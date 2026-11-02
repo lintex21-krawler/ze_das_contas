@@ -8,6 +8,9 @@ import { CardsPage } from '@/modules/cards/pages/CardsPage';
 import { AccountsPage } from '@/modules/accounts/pages/AccountsPage';
 import { CategoriesPage } from '@/modules/categories/pages/CategoriesPage';
 import { ShoppingListsPage } from '@/modules/shopping/pages/ShoppingListsPage';
+import { RecurringPage } from '@/modules/recurring/pages/RecurringPage';
+import { FamilyPage } from '@/modules/family/pages/FamilyPage';
+import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
 import { MoreMenuPage } from '@/modules/settings/pages/MoreMenuPage';
 import { LoginPage } from '@/modules/auth/pages/LoginPage';
 import { OnboardingPage } from '@/modules/auth/pages/OnboardingPage';
@@ -55,6 +58,18 @@ export const router = createBrowserRouter([
           {
             path: 'listas',
             element: <ShoppingListsPage />,
+          },
+          {
+            path: 'recorrencias',
+            element: <RecurringPage />,
+          },
+          {
+            path: 'familia',
+            element: <FamilyPage />,
+          },
+          {
+            path: 'configuracoes',
+            element: <SettingsPage />,
           },
           {
             path: 'mais',
